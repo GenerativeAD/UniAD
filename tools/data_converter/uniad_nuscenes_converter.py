@@ -28,7 +28,8 @@ def create_nuscenes_infos(root_path,
                           can_bus_root_path,
                           info_prefix,
                           version='v1.0-trainval',
-                          max_sweeps=10):
+                          max_sweeps=10,
+                          available_scene_names=None):
     """Create info file of nuscene dataset.
 
     Given the raw data, generate its related info file in pkl format.
@@ -40,6 +41,8 @@ def create_nuscenes_infos(root_path,
             Default: 'v1.0-trainval'
         max_sweeps (int): Max number of sweeps.
             Default: 10
+        available_scene_names (list): List of scene names to process.
+            If None, process all scenes. Default: None
     """
     from nuscenes.nuscenes import NuScenes
     from nuscenes.can_bus.can_bus_api import NuScenesCanBus
@@ -47,9 +50,11 @@ def create_nuscenes_infos(root_path,
     nusc = NuScenes(version=version, dataroot=root_path, verbose=True)
     nusc_can_bus = NuScenesCanBus(dataroot=can_bus_root_path)
     from nuscenes.utils import splits
-    available_vers = ['v1.0-trainval', 'v1.0-test', 'v1.0-mini']
+    # available_vers = ['v1.0-trainval', 'v1.0-test', 'v1.0-mini']
+    available_vers = ['v1.0-trainval', 'v1.0-test', 'v1.0-mini', 'interp_12Hz_trainval']
     assert version in available_vers
-    if version == 'v1.0-trainval':
+    # if version == 'v1.0-trainval':
+    if version == 'interp_12Hz_trainval' or version == 'v1.0-trainval':
         train_scenes = splits.train
         val_scenes = splits.val
     elif version == 'v1.0-test':
@@ -63,7 +68,25 @@ def create_nuscenes_infos(root_path,
 
     # filter existing scenes.
     available_scenes = get_available_scenes(nusc)
-    available_scene_names = [s['name'] for s in available_scenes]
+    if available_scene_names is None:
+        available_scene_names = [s['name'] for s in available_scenes]
+    # available_scene_names = [
+    #     'scene-0558',
+    #     'scene-0098',
+    #     'scene-0018',
+    #     'scene-1065',
+    #     'scene-0906',
+    #     'scene-0014',
+    #     'scene-0271',
+    #     'scene-0553',
+    #     'scene-0100',
+    #     'scene-0968',
+    #     'scene-0270',
+    #     'scene-0278',
+    #     'scene-0802',
+    #     'scene-0103'
+    # ]
+
     train_scenes = list(
         filter(lambda x: x in available_scene_names, train_scenes))
     val_scenes = list(filter(lambda x: x in available_scene_names, val_scenes))
@@ -231,6 +254,10 @@ def _fill_trainval_infos(nusc,
     val_nusc_infos = []
     frame_idx = 0
     for sample in mmcv.track_iter_progress(nusc.sample):
+        # PhysicalDreamer Filtering
+        if sample['scene_token'] not in train_scenes and sample['scene_token'] not in val_scenes:
+            continue
+
         lidar_token = sample['data']['LIDAR_TOP']
         sd_rec = nusc.get('sample_data', sample['data']['LIDAR_TOP'])
         cs_record = nusc.get('calibrated_sensor',
@@ -290,14 +317,14 @@ def _fill_trainval_infos(nusc,
         # obtain sweeps for a single key-frame
         sd_rec = nusc.get('sample_data', sample['data']['LIDAR_TOP'])
         sweeps = []
-        while len(sweeps) < max_sweeps:
-            if not sd_rec['prev'] == '':
-                sweep = obtain_sensor2top(nusc, sd_rec['prev'], l2e_t,
-                                          l2e_r_mat, e2g_t, e2g_r_mat, 'lidar')
-                sweeps.append(sweep)
-                sd_rec = nusc.get('sample_data', sd_rec['prev'])
-            else:
-                break
+        # while len(sweeps) < max_sweeps:
+        #     if not sd_rec['prev'] == '':
+        #         sweep = obtain_sensor2top(nusc, sd_rec['prev'], l2e_t,
+        #                                   l2e_r_mat, e2g_t, e2g_r_mat, 'lidar')
+        #         sweeps.append(sweep)
+        #         sd_rec = nusc.get('sample_data', sd_rec['prev'])
+        #     else:
+        #         break
         info['sweeps'] = sweeps
         # obtain annotation
         if not test:

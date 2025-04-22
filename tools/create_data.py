@@ -11,7 +11,8 @@ def nuscenes_data_prep(root_path,
                        version,
                        dataset_name,
                        out_dir,
-                       max_sweeps=10):
+                       max_sweeps=10,
+                       available_scene_names=None):
     """Prepare data related to nuScenes dataset.
 
     Related data consists of '.pkl' files recording basic infos,
@@ -24,9 +25,10 @@ def nuscenes_data_prep(root_path,
         dataset_name (str): The dataset class name.
         out_dir (str): Output directory of the groundtruth database info.
         max_sweeps (int): Number of input consecutive frames. Default: 10
+        available_scene_names (list): List of scene names to process. Default: None
     """
     nuscenes_converter.create_nuscenes_infos(
-        root_path, out_dir, can_bus_root_path, info_prefix, version=version, max_sweeps=max_sweeps)
+        root_path, out_dir, can_bus_root_path, info_prefix, version=version, max_sweeps=max_sweeps, available_scene_names=available_scene_names)
 
     if version == 'v1.0-test':
         info_test_path = osp.join(
@@ -35,9 +37,9 @@ def nuscenes_data_prep(root_path,
             root_path, info_test_path, version=version)
     else:
         info_train_path = osp.join(
-            out_dir, f'{info_prefix}_infos_temporal_train_uniad2.0.pkl')
+            out_dir, f'{info_prefix}_infos_temporal_train.pkl')
         info_val_path = osp.join(
-            out_dir, f'{info_prefix}_infos_temporal_val_uniad2.0.pkl')
+            out_dir, f'{info_prefix}_infos_temporal_val.pkl')
         nuscenes_converter.export_2d_annotation(
             root_path, info_train_path, version=version)
         nuscenes_converter.export_2d_annotation(
@@ -77,10 +79,16 @@ parser.add_argument(
 parser.add_argument('--extra-tag', type=str, default='kitti')
 parser.add_argument(
     '--workers', type=int, default=4, help='number of threads to be used')
+parser.add_argument(
+    '--available-scene-names',
+    type=str,
+    default=None,
+    help='List of scene names to process')
 args = parser.parse_args()
 
 if __name__ == '__main__':
-    if args.dataset == 'nuscenes' and args.version != 'v1.0-mini':
+    # if args.dataset == 'nuscenes' and args.version != 'v1.0-mini':
+    if args.dataset == 'nuscenes' and args.version != 'v1.0-mini' and args.version != 'interp_12Hz_trainval':
         train_version = f'{args.version}-trainval'
         nuscenes_data_prep(
             root_path=args.root_path,
@@ -89,7 +97,8 @@ if __name__ == '__main__':
             version=train_version,
             dataset_name='NuScenesDataset',
             out_dir=args.out_dir,
-            max_sweeps=args.max_sweeps)
+            max_sweeps=args.max_sweeps,
+            available_scene_names=eval(args.available_scene_names) if args.available_scene_names else None)
         test_version = f'{args.version}-test'
         nuscenes_data_prep(
             root_path=args.root_path,
@@ -98,8 +107,10 @@ if __name__ == '__main__':
             version=test_version,
             dataset_name='NuScenesDataset',
             out_dir=args.out_dir,
-            max_sweeps=args.max_sweeps)
-    elif args.dataset == 'nuscenes' and args.version == 'v1.0-mini':
+            max_sweeps=args.max_sweeps,
+            available_scene_names=eval(args.available_scene_names) if args.available_scene_names else None)
+    # elif args.dataset == 'nuscenes' and args.version == 'v1.0-mini':
+    elif args.dataset == 'nuscenes' and args.version == 'interp_12Hz_trainval':
         train_version = f'{args.version}'
         nuscenes_data_prep(
             root_path=args.root_path,
@@ -108,4 +119,5 @@ if __name__ == '__main__':
             version=train_version,
             dataset_name='NuScenesDataset',
             out_dir=args.out_dir,
-            max_sweeps=args.max_sweeps)
+            max_sweeps=args.max_sweeps,
+            available_scene_names=eval(args.available_scene_names) if args.available_scene_names else None)
