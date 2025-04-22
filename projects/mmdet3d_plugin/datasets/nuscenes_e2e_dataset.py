@@ -1131,6 +1131,7 @@ class NuScenesE2EDataset(NuScenesDataset):
         eval_set_map = {
             'v1.0-mini': 'mini_val',
             'v1.0-trainval': 'val',
+            'interp_12Hz_trainval': 'val',
         }
         detail = dict()
 

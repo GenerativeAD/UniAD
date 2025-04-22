@@ -68,36 +68,31 @@ def create_nuscenes_infos(root_path,
 
     # filter existing scenes.
     available_scenes = get_available_scenes(nusc)
-    if available_scene_names is None:
-        available_scene_names = [s['name'] for s in available_scenes]
-    # available_scene_names = [
-    #     'scene-0558',
-    #     'scene-0098',
-    #     'scene-0018',
-    #     'scene-1065',
-    #     'scene-0906',
-    #     'scene-0014',
-    #     'scene-0271',
-    #     'scene-0553',
-    #     'scene-0100',
-    #     'scene-0968',
-    #     'scene-0270',
-    #     'scene-0278',
-    #     'scene-0802',
-    #     'scene-0103'
-    # ]
+    available_scene_names_all = [s['name'] for s in available_scenes]
 
-    train_scenes = list(
-        filter(lambda x: x in available_scene_names, train_scenes))
-    val_scenes = list(filter(lambda x: x in available_scene_names, val_scenes))
-    train_scenes = set([
-        available_scenes[available_scene_names.index(s)]['token']
-        for s in train_scenes
-    ])
-    val_scenes = set([
-        available_scenes[available_scene_names.index(s)]['token']
-        for s in val_scenes
-    ])
+    # Filter scenes if available_scene_names is provided
+    if available_scene_names is not None:
+        # Get scene tokens directly from available_scene_names
+        train_scenes = set()
+        val_scenes = set()
+        for scene in available_scenes:
+            if scene['name'] in available_scene_names:
+                if scene['name'] in splits.train:
+                    train_scenes.add(scene['token'])
+                if scene['name'] in splits.val:
+                    val_scenes.add(scene['token'])
+        print(f"Processing {len(train_scenes)} train scenes and {len(val_scenes)} val scenes: {available_scene_names}")
+    else:
+        train_scenes = list(filter(lambda x: x in available_scene_names_all, train_scenes))
+        val_scenes = list(filter(lambda x: x in available_scene_names_all, val_scenes))
+        train_scenes = set([
+            available_scenes[available_scene_names_all.index(s)]['token']
+            for s in train_scenes
+        ])
+        val_scenes = set([
+            available_scenes[available_scene_names_all.index(s)]['token']
+            for s in val_scenes
+        ])
 
     test = 'test' in version
     if test:

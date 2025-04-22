@@ -99,18 +99,18 @@ if __name__ == '__main__':
             out_dir=args.out_dir,
             max_sweeps=args.max_sweeps,
             available_scene_names=eval(args.available_scene_names) if args.available_scene_names else None)
-        test_version = f'{args.version}-test'
-        nuscenes_data_prep(
-            root_path=args.root_path,
-            can_bus_root_path=args.canbus,
-            info_prefix=args.extra_tag,
-            version=test_version,
-            dataset_name='NuScenesDataset',
-            out_dir=args.out_dir,
-            max_sweeps=args.max_sweeps,
-            available_scene_names=eval(args.available_scene_names) if args.available_scene_names else None)
+        # test_version = f'{args.version}-test'
+        # nuscenes_data_prep(
+        #     root_path=args.root_path,
+        #     can_bus_root_path=args.canbus,
+        #     info_prefix=args.extra_tag,
+        #     version=test_version,
+        #     dataset_name='NuScenesDataset',
+        #     out_dir=args.out_dir,
+        #     max_sweeps=args.max_sweeps,
+        #     available_scene_names=eval(args.available_scene_names) if args.available_scene_names else None)
     # elif args.dataset == 'nuscenes' and args.version == 'v1.0-mini':
-    elif args.dataset == 'nuscenes' and args.version == 'interp_12Hz_trainval':
+    elif args.dataset == 'nuscenes' and (args.version == 'interp_12Hz_trainval' or args.version == 'v1.0-mini'):
         train_version = f'{args.version}'
         nuscenes_data_prep(
             root_path=args.root_path,

@@ -198,7 +198,7 @@ def exist_corners_in_image_but_not_all(box, intrinsic: np.ndarray, imsize: Tuple
         return False
 
 
-def load_gt(nusc: NuScenes, eval_split: str, box_cls, verbose: bool = False):
+def load_gt(nusc: NuScenes, eval_split: str, box_cls, verbose: bool = False, available_scene_tokens=None):
     """
     Loads ground truth boxes from DB.
     :param nusc: A NuScenes instance.
@@ -220,6 +220,15 @@ def load_gt(nusc: NuScenes, eval_split: str, box_cls, verbose: bool = False):
 
     # Only keep samples from this split.
     splits = create_splits_scenes()
+
+    # PhysicalDreamer Filter
+    if available_scene_tokens is not None:
+        sample_tokens_all = []
+        for sample in nusc.sample:
+            scene_token = sample['scene_token']
+            if scene_token in available_scene_tokens:
+                sample_tokens_all.append(sample['token'])
+        print(f"Found {len(sample_tokens_all)} samples ")
 
     # Check compatibility of split with nusc_version.
     version = nusc.version
@@ -511,7 +520,12 @@ class NuScenesEval_custom(NuScenesEval):
             print('Initializing nuScenes detection evaluation')
         self.pred_boxes, self.meta = load_prediction(self.result_path, self.cfg.max_boxes_per_sample, DetectionBox,
                                                      verbose=verbose)
-        self.gt_boxes = load_gt(self.nusc, self.eval_set, DetectionBox_modified, verbose=verbose)
+        available_scene_tokens = []
+        for sample in self.pred_boxes.sample_tokens:
+            available_scene_tokens.append(self.nusc.get('sample', sample)['scene_token'])
+        print(available_scene_tokens)
+        self.gt_boxes = load_gt(self.nusc, self.eval_set, DetectionBox_modified, verbose=verbose,
+                                available_scene_tokens=available_scene_tokens)
 
         assert set(self.pred_boxes.sample_tokens) == set(self.gt_boxes.sample_tokens), \
             "Samples in split doesn't match samples in predictions."
