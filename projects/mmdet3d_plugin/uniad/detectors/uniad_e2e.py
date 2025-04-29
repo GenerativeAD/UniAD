@@ -348,6 +348,10 @@ class UniAD(UniADTrack):
             if self.with_seg_head:
                 res.update(result_seg[i])
 
+        result[0]['bev_embed'] = bev_embed
+        result[0]['pos'] = torch.from_numpy(tmp_pos)
+        result[0]['angle'] = tmp_angle
+
         return result
 
 
