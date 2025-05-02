@@ -187,8 +187,16 @@ def custom_multi_gpu_test(model, data_loader, tmpdir=None, gpu_collect=False):
         ret_results['mask_results'] = mask_results
     return ret_results
 
-def test_bev_embed_multi_gpu(model, data_loader, start_frame=0, end_frame=10):
-
+def test_bev_embed_multi_gpu(model, data_loader, start_frame=0, end_frame=10, scene_name=None, save_bev_feat_dir='workspace/bev_similarity'):
+    """Test BEV features with multiple GPUs.
+    Args:
+        model (nn.Module): Model to be tested.
+        data_loader (nn.Dataloader): Pytorch data loader.
+        start_frame (int): Start frame index.
+        end_frame (int): End frame index.
+        save_bev_feat_dir (str): Directory to save BEV features.
+        scene_name (str, optional): Name of the scene to process. If None, process all scenes.
+    """
     model.eval()
 
     # Occ eval init
@@ -222,9 +230,36 @@ def test_bev_embed_multi_gpu(model, data_loader, start_frame=0, end_frame=10):
     have_mask = False
     num_occ = 0
 
+    current_scene = None
+    frame_count = 0
+    scene_start_frame = None
+    result = None
+    current_scene_name = None
+
     for i, data in enumerate(data_loader):
-        if i < start_frame:
+        # Get current scene name
+        scene_token = data['img_metas'][0].data[0][0]['scene_token']
+        current_scene_name = dataset.nusc.get('scene', scene_token)['name']
+
+        # If scene_name is specified, only process that scene
+        if scene_name is not None and current_scene_name != scene_name:
             continue
+
+        # If this is a new scene, reset frame count
+        if current_scene != current_scene_name:
+            current_scene = current_scene_name
+            frame_count = 0
+            scene_start_frame = i
+
+        # Skip frames before start_frame
+        if frame_count < start_frame:
+            frame_count += 1
+            continue
+
+        # Stop if we've reached end_frame
+        if frame_count > end_frame:
+            break
+
         with torch.no_grad():
             result = model(return_loss=False, rescale=True, **data)
 
@@ -283,16 +318,26 @@ def test_bev_embed_multi_gpu(model, data_loader, start_frame=0, end_frame=10):
             for _ in range(batch_size * world_size):
                 prog_bar.update()
 
-        if i == end_frame:
-            break
+        frame_count += 1
+
+    if result is None:
+        print(f"Warning: No frames were processed for scene {scene_name}")
+        return
 
     return_res = {
         'bev_embed': result[0]['bev_embed'],
         'pos': result[0]['pos'],
         'angle': result[0]['angle'],
+        'scene_name': current_scene_name,
+        'start_frame': start_frame,
+        'end_frame': end_frame,
     }
 
-    torch.save(return_res, f'bev_embed_{start_frame}_{end_frame}.pth')
+    # Create save directory if it doesn't exist
+    if rank == 0:
+        os.makedirs(save_bev_feat_dir, exist_ok=True)
+        save_name = f'bev_embed_{current_scene_name}_{start_frame}_{end_frame}.pth' if scene_name else f'bev_embed_{start_frame}_{end_frame}.pth'
+        torch.save(return_res, os.path.join(save_bev_feat_dir, save_name))
 
 def collect_results_cpu(result_part, size, tmpdir=None):
     rank, world_size = get_dist_info()

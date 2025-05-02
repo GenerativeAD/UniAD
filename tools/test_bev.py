@@ -91,8 +91,10 @@ def parse_args():
         default='pytorch',
         help='job launcher')
     parser.add_argument('--local_rank', type=int, default=0)
-    parser.add_argument('--start_frame', type=int, default=0)
-    parser.add_argument('--end_frame', type=int, default=9)
+    parser.add_argument('--start_frame', type=int, default=0, help='Start frame index for the specified scene')
+    parser.add_argument('--end_frame', type=int, default=9, help='End frame index for the specified scene')
+    parser.add_argument('--save_bev_feat_dir', type=str, default='workspace/bev_similarity', help='Directory to save BEV features')
+    parser.add_argument('--scene_name', type=str, default=None, help='Name of the scene to process (e.g., scene-0014). If None, process all scenes.')
     args = parser.parse_args()
     if 'LOCAL_RANK' not in os.environ:
         os.environ['LOCAL_RANK'] = str(args.local_rank)
@@ -230,7 +232,7 @@ def main():
             model.cuda(),
             device_ids=[torch.cuda.current_device()],
             broadcast_buffers=False)
-        test_bev_embed_multi_gpu(model, data_loader, args.start_frame, args.end_frame)
+        test_bev_embed_multi_gpu(model, data_loader, args.start_frame, args.end_frame, args.scene_name, args.save_bev_feat_dir)
 
 if __name__ == '__main__':
     torch.multiprocessing.set_start_method('fork')
